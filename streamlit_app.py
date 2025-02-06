@@ -10,13 +10,13 @@ if "messages" not in st.session_state:
     ]
     st.session_state.chat_history = []  # This will store the LangChain format history
 
-def get_document_names():
-    """Get list of document names from the docs directory"""
-    docs_path = './docs/'
-    files = os.listdir(docs_path)
-    # Get base names without extensions and sort them
-    doc_names = sorted([os.path.splitext(file)[0] for file in files if file.endswith('.pdf')])
-    return doc_names
+# def get_document_names():
+#     """Get list of document names from the docs directory"""
+#     docs_path = './docs/'
+#     files = os.listdir(docs_path)
+#     # Get base names without extensions and sort them
+#     doc_names = sorted([os.path.splitext(file)[0] for file in files if file.endswith('.pdf')])
+#     return doc_names
 
 def chat_with_backend(question):
     """Make a POST request to the Flask backend"""
@@ -81,7 +81,7 @@ def main():
     # Sidebar with document names and user guide
     with st.sidebar:
         st.header("📚 Available Documents")
-        doc_names = get_document_names()
+        doc_names = ['Annihilation of Caste', 'Buddha and his Dhamma', 'Dr. Babasaheb Ambedkar Writings & Speeches Vol. 1', 'Dr. Babasaheb Ambedkar Writings & Speeches Vol. 3']
         for doc in doc_names:
             st.markdown(f"- {doc}")
         
