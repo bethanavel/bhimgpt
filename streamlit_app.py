@@ -56,7 +56,7 @@ def chat_with_backend(question):
                 answer = response_data['answer']
                 source_file = response_data['source_file']
                 # Display answer with source file
-                if len(answer) > 100:
+                if len(answer) > 300:
                     return f"{answer}\n\nSource: {source_file}"
                 else:
                     return answer
