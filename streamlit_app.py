@@ -1,15 +1,124 @@
 import streamlit as st
 import requests
+import json
+import os
 
-# Streamlit UI
-st.title("💬 AI-Powered Q&A")
+# Initialize session state for messages and chat history if they don't exist
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "assistant", "content": "Jai Bhim! I will answer your questions based on Ambedkar's works. Ask away!"}
+    ]
+    st.session_state.chat_history = []  # This will store the LangChain format history
 
-query = st.text_input("Ask a question:")
-if st.button("Get Answer"):
-    if query:
-        response = requests.post("https://3ae2593a-f3d2-4010-9a12-5053234c8ba7-00-1wnfsg3z2n3gn.pike.replit.dev/ask",
-                                 json={"query": query})
-        answer = response.json().get("answer", "No response")
-        st.write("**Answer:**", answer)
-    else:
-        st.warning("Please enter a question.")
+def get_document_names():
+    """Get list of document names from the docs directory"""
+    docs_path = './docs/'
+    files = os.listdir(docs_path)
+    # Get base names without extensions and sort them
+    doc_names = sorted([os.path.splitext(file)[0] for file in files if file.endswith('.pdf')])
+    return doc_names
+
+def chat_with_backend(question):
+    """Make a POST request to the Flask backend"""
+    try:
+        # st.write(f"Sending request to backend...")
+        
+        payload = {
+            'question': question,
+            'chat_history': st.session_state.chat_history
+        }
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Origin': 'http://localhost:8501'  # Add Streamlit's default port
+        }
+        
+        response = requests.post(
+            ' https://5f02-103-109-45-89.ngrok-free.app/chat',
+            json=payload,
+            headers=headers,
+            timeout=30
+        )
+        
+        # st.write(f"Response status code: {response.status_code}")
+        # st.write(f"Response headers: {response.headers}")
+        # st.write(f"Raw response: {response.text}")  # Add this for debugging
+        
+        if response.status_code == 204 or not response.text:  # Handle empty responses
+            return "Error: Empty response from server"
+            
+        try:
+            response_data = response.json()
+            print(response_data)
+            if response.status_code == 200:
+                st.session_state.chat_history = response_data['chat_history']
+                answer = response_data['answer']
+                source_file = response_data['source_file']
+                # Display answer with source file
+                if len(answer) > 100:
+                    return f"{answer}\n\nSource: {source_file}"
+                else:
+                    return answer
+            else:
+                error_msg = response_data.get('error', 'Unknown error occurred')
+                st.error(f"Server error: {error_msg}")
+                return f"Error: {error_msg}"
+        except json.JSONDecodeError as e:
+            st.error(f"Failed to decode JSON response. Raw response: {response.text}")
+            return "Error: Invalid response from server"
+            
+    except requests.exceptions.ConnectionError:
+        st.error("Could not connect to the backend server. Please make sure the Flask server is running on http://localhost:5000")
+        return "Error: Connection failed"
+    except Exception as e:
+        st.error(f"An unexpected error occurred: {str(e)}")
+        return f"Error: {str(e)}"
+
+def main():
+    st.title('Welcome to BhimGPT')
+    
+    # Sidebar with document names and user guide
+    with st.sidebar:
+        st.header("📚 Available Documents")
+        doc_names = get_document_names()
+        for doc in doc_names:
+            st.markdown(f"- {doc}")
+        
+        st.markdown("---")  # Separator
+        
+        st.header("🔍 Important book or article missing?")
+        st.markdown("Pls email the document in PDF format to beth@coderkoodam.org")
+        
+        if st.button("Reset Chat"):
+            st.session_state.messages = [
+                {"role": "assistant", "content": "Jai Bhim! Ask your questions about Ambedkar's works."}
+            ]
+            st.session_state.chat_history = []
+            st.rerun()
+    
+    # Display chat history
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+    
+    # Handle user input
+    if prompt := st.chat_input("What's on your mind?"):
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        
+        with st.chat_message("user"):
+            st.write(prompt)
+        
+        with st.chat_message("assistant"):
+            with st.spinner("Fetching..."):
+                # Get response from Flask backend
+                response = chat_with_backend(prompt)
+                st.write(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
+
+
+if __name__ == "__main__":
+    main()
+
+
