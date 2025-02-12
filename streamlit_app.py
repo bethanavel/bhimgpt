@@ -10,13 +10,13 @@ if "messages" not in st.session_state:
     ]
     st.session_state.chat_history = []  # This will store the LangChain format history
 
-# def get_document_names():
-#     """Get list of document names from the docs directory"""
-#     docs_path = './docs/'
-#     files = os.listdir(docs_path)
-#     # Get base names without extensions and sort them
-#     doc_names = sorted([os.path.splitext(file)[0] for file in files if file.endswith('.pdf')])
-#     return doc_names
+def get_document_names():
+    """Get list of document names from the docs directory"""
+    docs_path = './docs/'
+    files = os.listdir(docs_path)
+    # Get base names without extensions and sort them
+    doc_names = sorted([os.path.splitext(file)[0] for file in files if file.endswith('.pdf')])
+    return doc_names
 
 def chat_with_backend(question):
     """Make a POST request to the Flask backend"""
@@ -35,7 +35,7 @@ def chat_with_backend(question):
         }
         
         response = requests.post(
-            ' https://1487-103-109-45-89.ngrok-free.app/chat',
+            'http://127.0.0.1:5000/chat',
             json=payload,
             headers=headers,
             timeout=30
@@ -54,12 +54,19 @@ def chat_with_backend(question):
             if response.status_code == 200:
                 st.session_state.chat_history = response_data['chat_history']
                 answer = response_data['answer']
-                source_file = response_data['source_file']
-                # Display answer with source file
-                if len(answer) > 300:
-                    return f"{answer}\n\nSource: {source_file}"
+                sources = response_data.get('sources', [])
+                
+                # Only add source information if we have good matches
+                if sources:
+                    source_text = "\n\nSources:"
+                    for source in sources:
+                        file_name = source.get('file_name', 'Unknown')
+                        page = source.get('page', 'N/A')
+                        source_text += f"\n- {file_name} (Page {page})"
+                    return f"{answer}{source_text}"
                 else:
-                    return answer
+                    return answer  # Return just the answer without sources if no good matches
+                
             else:
                 error_msg = response_data.get('error', 'Unknown error occurred')
                 st.error(f"Server error: {error_msg}")
@@ -81,7 +88,7 @@ def main():
     # Sidebar with document names and user guide
     with st.sidebar:
         st.header("📚 Available Documents")
-        doc_names = ['Annihilation of Caste', 'Buddha and his Dhamma', 'Dr. Babasaheb Ambedkar Writings & Speeches Vol. 1', 'Dr. Babasaheb Ambedkar Writings & Speeches Vol. 3']
+        doc_names = get_document_names()
         for doc in doc_names:
             st.markdown(f"- {doc}")
         
