@@ -35,7 +35,7 @@ def chat_with_backend(question):
         }
         
         response = requests.post(
-            'https://fdb7-103-109-45-173.ngrok-free.app/chat',
+            ' https://0d63-103-176-188-207.ngrok-free.app/chat',
             json=payload,
             headers=headers,
             timeout=30
